@@ -1,0 +1,180 @@
+// Chuỗi HTML chứa các thẻ <img>
+var img = '<img src="https://res.cloudinary.com/dmoljnqzh/image/upload/v1713146698/65fbb99f90808e16537dfb59/naruto-avata.jpg"/><img src="https://res.cloudinary.com/dmoljnqzh/image/upload/v1713146698/65fbb99f90808e16537dfb59/naruto-avata.jpg"/><img src="https://res.cloudinary.com/dmoljnqzh/image/upload/v1713146698/65fbb99f90808e16537dfb59/naruto-avata.jpg"/>';
+
+// Tạo một phần tử div ẩn để phân tích chuỗi HTML
+var tempDiv = document.createElement('div');
+tempDiv.innerHTML = img;
+
+// Lấy danh sách các phần tử <img> từ div tạm thời
+var imgElements = tempDiv.querySelectorAll('img');
+
+// Lặp qua từng phần tử <img> và xử lý (ví dụ: in đường dẫn src của mỗi hình ảnh)
+imgElements.forEach(function(imgElement) {
+    console.log(imgElement.getAttribute('src')); // In đường dẫn src của từng hình ảnh
+});
+
+nãy có chỉnh ở bên CommentModel chỗ chapId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comic.Chapter", --->"Manga.Chapter"
+    },
+
+Liên kết	behaviorList---manga			done
+			behavior---user					done
+			feedBack---user					done
+			comment----user					done
+			comment----manga				done
+			cooment----chapter				done
+			historyList----manga			done
+			historyList----chapter			done
+			history----user					done
+			manga ---- user					done
+			ratting --- user				done
+			notificate---user				done (không cần thiết xóa vì nó tự động xóa)
+			follow----manga					done
+			follow----chapter				done
+			warning----user					done
+
+thiếu upload file ảnh cho profile			done
+
+trong trang theo dõi có lấy ra thông tin vè chương đang đọc dở			done
+thiếu update comment và feedBack 			done
+
+đối với truyện con gái thì: Comedy or Romance or Ngôn tình
+đối với truyện con trai thì: Action (bắt buộc)
+
+npm install cheerio
+const cheerio = require('cheerio');
+
+const image = '<img src="https://res.cloudinary.com/dmoljnqzh/image/upload/v1713146698/65fbb99f90808e16537dfb59/naruto-avata.jpg"/>';
+
+// Load chuỗi HTML vào đối tượng cheerio
+const $ = cheerio.load(image);
+
+// Tìm thẻ 'img' và lấy thuộc tính 'src'
+const srcValue = $('img').attr('src');
+
+if (srcValue) {
+    console.log(srcValue); // In ra giá trị của thuộc tính src
+} else {
+    console.log('Không tìm thấy thẻ img hoặc thiếu thuộc tính src.');
+}
+// Tìm tất cả các thẻ <img> trong tài liệu
+const imgElements = document.querySelectorAll('img');
+
+// Duyệt qua từng thẻ <img>
+imgElements.forEach(img => {
+    // Thêm lớp CSS 'lazyloading' vào thẻ <img>
+    img.classList.add('lazyloading');
+
+    // Kích hoạt lazy loading (nếu được hỗ trợ)
+    if ('loading' in HTMLImageElement.prototype) {
+        img.loading = 'lazy';
+    }
+});
+
+
+      const comments = await Comment.aggregate([
+      {
+        $match: matchStage,
+      },
+      // {
+      //   $lookup: {
+      //     from: "users",
+      //     localField: "feedBack.userId",
+      //     foreignField: "_id",
+      //     as: "userComment",
+      //   },
+      // },
+      // {
+      //   $lookup: {
+      //     from: "users",
+      //     localField: "feedBack.feedBackToId",
+      //     foreignField: "_id",
+      //     as: "userFeedback",
+      //   },
+      // },
+      // {
+      //   $unwind: {
+      //     path: "$commentFeedBack",
+      //     preserveNullAndEmptyArrays: true, // Giữ các document không có phần tử trong mảng
+      //   },
+      // },
+      {
+        $unwind: { path: "$feedBack", preserveNullAndEmptyArrays: true }, // Mở rộng mảng feedBack
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "feedBack.userId",
+          foreignField: "_id",
+          as: "userDetails", // Tạo một mảng mới chứa thông tin từ userComment
+        },
+      },
+      {
+        $unwind: { path: "$userDetails", preserveNullAndEmptyArrays: true }, // Mở rộng mảng userDetails
+      },
+      {
+        $addFields: {
+          "feedBack.fullName": "$userDetails.fullName", // Thêm trường fullName từ userDetails vào feedBack
+          "feedBack.image": "$userDetails.image", // Thêm trường image từ userDetails vào feedBack
+        },
+      },
+      {
+        $group: {
+          _id: "$_id", // Nhóm lại theo _id ban đầu của comment
+          commentContent: { $first: "$commentContent" }, // Giữ lại các trường của comment
+          userId: { $first: "$userId" },
+          mangaId: { $first: "$mangaId" },
+          chapId: { $first: "$chapId" },
+          isChecked: { $first: "$isChecked" },
+          createdAt: { $first: "$createdAt" },
+          updatedAt: { $first: "$updatedAt" },
+          __v: { $first: "$__v" },
+          feedBack: {
+            $push: {
+              $cond: [
+                { $ne: ["$feedBack", {}] }, // Kiểm tra feedBack có khác {} không
+                "$feedBack", // Nếu khác {} thì push feedBack vào mảng
+                null, // Nếu là {} thì không push
+              ],
+            },
+          }, // Tạo lại mảng feedBack sau khi thêm thông tin
+        },
+      },
+      { $sort: sortComment },
+    ]);
+
+    feedBack: {
+            $map: {
+              input: "$feedBack",
+              as: "feedback",
+              in: {
+                userId: "$$feedback.userId",
+                userName: "",
+                userImage: "",
+                feedBackContent: "$$feedback.feedBackContent",
+                feedBackToId: "$$feedback.feedBackToId",
+                feedBackToName: "",
+                _id: "$$feedback._id",
+                createdAt: "$$feedback.createdAt",
+                updatedAt: "$$feedback.updatedAt",
+                // userInfo: {
+                //   $arrayElemAt: [
+                //     {
+                //       $filter: {
+                //         input: "users",
+                //         as: "user",
+                //         cond: { $eq: ["$$user._id", "$$feedback.userId"] },
+                //       },
+                //     },
+                //     0,
+                //   ],
+                // },
+                userInfo: {
+                  $filter: {
+                    input,
+                  },
+                },
+              },
+            },
+          },

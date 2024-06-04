@@ -1,0 +1,134 @@
+import http from 'http';
+import WebSocket from 'ws';
+import express from 'express';
+import jwt from 'jsonwebtoken';
+import asyncHandler from 'express-async-handler';
+import UserModel from '../models/UserModel.js';
+import Behavior from '../models/BehaviorModel.js';
+import MangaModel from '../models/MangaModel.js';
+import HistoryModel from '../models/HistoryModel.js';
+import cron from 'node-cron';
+import { protect } from '../middlewares/Auth.js';
+
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+const userCronJobs = new Map();
+
+const startCronJob = (userId, behaviorItem) => {
+  if (!userCronJobs.has(userId)) {
+    const cronJob = cron.schedule("* * * * * *", async () => {
+      behaviorItem.sumTimeRead += 1;
+      await behaviorItem.save();
+      console.log("Cron job running for user:", userId);
+    });
+    userCronJobs.set(userId, cronJob);
+  }
+};
+
+const stopCronJob = (userId) => {
+  const cronJob = userCronJobs.get(userId);
+  if (cronJob) {
+    cronJob.stop();
+    userCronJobs.delete(userId);
+  }
+};
+
+wss.on('connection', (ws, request) => {
+  const userId = request.user._id.toString(); // Giả sử user ID được lấy từ request
+
+  ws.on('message', (message) => {
+    const { action, manganame, chapid } = JSON.parse(message);
+    if (action === 'start') {
+      addBehavior(request.user, manganame, chapid).then(([behavior, mangaId]) => {
+        const behaviorItem = behavior.behaviorList.find(
+          (b) => b.mangaId.toString() === mangaId.toString()
+        );
+        startCronJob(userId, behaviorItem);
+      });
+    } else if (action === 'stop') {
+      stopCronJob(userId);
+    }
+  });
+
+  ws.on('close', () => {
+    stopCronJob(userId);
+  });
+});
+
+server.on('upgrade', (request, socket, head) => {
+  // Xác thực WebSocket với JWT token
+  protect(request, {}, () => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  });
+});
+
+server.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
+*****************************************************************************
+const protect = asyncHandler(async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await UserModel.findById(decoded.id).select("-password");
+      next();
+    } catch (error) {
+      console.log(error);
+      res.status(401).json({ message: 'No authorized, token failed' });
+    }
+  } else {
+    res.status(401).json({ message: 'No authorized, no token' });
+  }
+});
+
+*******************************************************************************
+import React, { useEffect, useRef } from 'react';
+
+const ReadPage = ({ manganame, chapname, chapid }) => {
+  const ws = useRef(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token'); // Lấy token từ localStorage
+
+    ws.current = new WebSocket(`ws://your-server-url?token=${token}`);
+
+    ws.current.onopen = () => {
+      ws.current.send(JSON.stringify({
+        action: 'start',
+        manganame,
+        chapid,
+      }));
+    };
+
+    ws.current.onclose = () => {
+      ws.current.send(JSON.stringify({
+        action: 'stop',
+      }));
+    };
+
+    return () => {
+      ws.current.send(JSON.stringify({
+        action: 'stop',
+      }));
+      ws.current.close();
+    };
+  }, [manganame, chapname, chapid]);
+
+  return (
+    <div>
+      {/* Nội dung trang đọc truyện */}
+    </div>
+  );
+};
+
+export default ReadPage;
