@@ -210,8 +210,8 @@ export const autoCheckComment = cron.schedule("0 0 1 * * *", async () => {
   try {
     const commentList = await CommentModel.find({
       $or: [
-        { isChecked: false }, // Tìm các Comment có isChecked là false
-        { "feedBack.isChecked": false }, // Tìm các Comment có ít nhất một feedBack có isChecked là false
+        { isChecked: false },
+        { "feedBack.isChecked": false },
       ],
     });
     if (commentList) {
@@ -227,7 +227,7 @@ export const autoCheckComment = cron.schedule("0 0 1 * * *", async () => {
               );
             }
           });
-          if (comment.isChecked == false)
+          if (comment.isChecked === false)
             await checkFunc(comment, null, comment.commentContent, true);
         } else {
           await checkFunc(comment, null, comment.commentContent, true);

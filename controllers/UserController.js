@@ -17,6 +17,7 @@ import NotificationModel from "../models/NotificationModel.js";
 import { render, renderComment } from "../utils/render.js";
 import { image } from "@tensorflow/tfjs";
 import axios from "axios";
+import passport from "../config/passport.js";
 
 // @desc Register user
 // @route POST /api/users
@@ -49,22 +50,13 @@ const registerUser = asyncHandler(async (req, res) => {
     // create user
     const user = await User.create({
       fullName,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       image,
       isAdmin: admin,
     });
     // if user created successfully send user data and token to client
     if (user) {
-      await HistoryModel.create({
-        userId: user._id,
-      });
-      await BehaviorModel.create({
-        userId: user._id,
-      });
-      await WarningModel.create({
-        userId: user._id,
-      });
       // Bổ sung thêm
       //generate 6 digit OTP
       let OPT = generateOTP();
@@ -84,9 +76,11 @@ const registerUser = asyncHandler(async (req, res) => {
       var transport = generateMailTransporter();
 
       transport.sendMail({
-        from: "mailtrap@demomailtrap.com",
+        // from: "mailtrap@demomailtrap.com",
+        // to: "6151071090@st.utc2.edu.vn",
+        from: "6151071090@st.utc2.edu.vn",
+        to: user.email,
         // to: user.email,
-        to: "6151071090@st.utc2.edu.vn",
         subject: "Email Verification",
         html: `
                 <p>Your verification OTP</p>
@@ -136,14 +130,32 @@ const verifyEmail = asyncHandler(async (req, res) => {
 
   var transport = generateMailTransporter();
   transport.sendMail({
-    from: "mailtrap@demomailtrap.com",
+    // from: "mailtrap@demomailtrap.com",
+    // to: "6151071090@st.utc2.edu.vn",
+    from: "6151071090@st.utc2.edu.vn",
+    to: user.email,
     // to: user.email,
-    to: "6151071090@st.utc2.edu.vn",
     subject: "Welcome Email",
     html: `
             <h1> Welcome to our app and thanks for choosing us. </h1>
         `,
   });
+  const historyExist = await HistoryModel.findOne({ userId: user._id });
+  if (!historyExist)
+    await HistoryModel.create({
+      userId: user._id,
+    });
+  const behaviorExist = await BehaviorModel.findOne({ userId: user._id });
+  if (!behaviorExist)
+    await BehaviorModel.create({
+      userId: user._id,
+    });
+  const warningExist = await WarningModel.findOne({ userId: user._id });
+  if (!warningExist)
+    await WarningModel.create({
+      userId: user._id,
+    });
+
   res.json({
     user: {
       id: user._id,
@@ -153,6 +165,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
       isAdmin: user.isAdmin,
       isVerified: user.isVerified,
       token: generateToken(user._id),
+      hasPassword: user.password !== "0 password" ? true : false,
     },
     message: "Your email is verified.",
   });
@@ -193,8 +206,10 @@ const resendEmailVerificationToken = asyncHandler(async (req, res) => {
     var transport = generateMailTransporter();
 
     transport.sendMail({
-      from: "mailtrap@demomailtrap.com",
-      to: "6151071090@st.utc2.edu.vn",
+      // from: "mailtrap@demomailtrap.com",
+      // to: "6151071090@st.utc2.edu.vn",
+      from: "6151071090@st.utc2.edu.vn",
+      to: user.email,
       // to: user.email,
       subject: "Welcome Email",
       html: `
@@ -212,10 +227,10 @@ const resendEmailVerificationToken = asyncHandler(async (req, res) => {
 // @route POST /api/users/forget-password
 // @access Public
 const forgetPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+  let { email } = req.body;
 
   if (!email) sendError(res, "Please enter your email!");
-
+  email = email.toLowerCase();
   const user = await User.findOne({ email });
   if (!user) sendError(res, "Can not found your account", 404);
 
@@ -235,8 +250,10 @@ const forgetPassword = asyncHandler(async (req, res) => {
     const transport = generateMailTransporter();
 
     transport.sendMail({
-      from: "mailtrap@demomailtrap.com",
-      to: "6151071090@st.utc2.edu.vn",
+      // from: "mailtrap@demomailtrap.com",
+      // to: "6151071090@st.utc2.edu.vn",
+      from: "6151071090@st.utc2.edu.vn",
+      to: user.email,
       // to: user.email,
       subject: "Reset Password Link",
       html: `
@@ -286,8 +303,10 @@ const resetPassword = asyncHandler(async (req, res) => {
     const transport = generateMailTransporter();
 
     transport.sendMail({
-      from: "mailtrap@demomailtrap.com",
-      to: "6151071090@st.utc2.edu.vn",
+      // from: "mailtrap@demomailtrap.com",
+      // to: "6151071090@st.utc2.edu.vn",
+      from: "6151071090@st.utc2.edu.vn",
+      to: user.email,
       // to: user.email,
       subject: "Password Reset Successfully",
       html: `
@@ -309,9 +328,11 @@ const resetPassword = asyncHandler(async (req, res) => {
 // @route POST /api/users/login
 // @access public
 const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { password } = req.body;
+  let { email } = req.body;
   try {
     // Find account in db
+    email = email.toLowerCase();
     const user = await User.findOne({ email });
     if (user.enable === 0) res.status(400).json({ message: error.message });
     if (user && (await bcrypt.compare(password, user.password))) {
@@ -324,6 +345,7 @@ const loginUser = asyncHandler(async (req, res) => {
           isAdmin: user.isAdmin,
           isVerified: user.isVerified,
           token: generateToken(user._id),
+          hasPassword: user.password !== "0 password" ? true : false,
         });
       } else {
         res.json({
@@ -333,6 +355,101 @@ const loginUser = asyncHandler(async (req, res) => {
       }
     } else {
       sendError(res, "Email or password is invalid");
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// @desc Login google
+// @route POST /api/google/callback
+// @access public
+const loginGoogle = (req, res, next) => {
+  passport.authenticate(
+    "google",
+    { session: false },
+    async (err, user, info) => {
+      if (err) {
+        // Xử lý lỗi nếu có
+        return res.status(500).json({ message: "Internal server error" });
+      }
+      if (!user) {
+        // Xác thực thất bại, chuyển hướng người dùng đến trang login và truyền thông báo lỗi
+        return res.redirect("http://localhost:3000/login");
+      }
+      try {
+        const email = user._json.email;
+        const userExists = await User.findOne({ email });
+        if (!userExists) {
+          await User.create({
+            fullName: user._json.name,
+            email: email.toLowerCase(),
+            password: "0 password",
+            image: user._json.picture,
+            isAdmin: false,
+          });
+        }
+        return res.redirect(
+          `http://localhost:3000/Login?success=${user._json.email}`
+        );
+      } catch (error) {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  )(req, res, next);
+};
+
+// @desc Login google success
+// @route POST /api/google/success
+// @access public
+const loginGoogleSucces = asyncHandler(async (req, res) => {
+  let { email } = req.body;
+  try {
+    // Find account in db
+    email = email.toLowerCase();
+    const user = await User.findOne({ email });
+    if (user.enable === 0) res.status(400).json({ message: error.message });
+    if (user.isVerified) {
+      res.json({
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        image: user.image,
+        isAdmin: user.isAdmin,
+        isVerified: user.isVerified,
+        token: generateToken(user._id),
+        hasPassword: user.password !== "0 password" ? true : false,
+      });
+    } else {
+      const alreadyHasToken = await EmailVerificationToken.findOne({
+        owner: user._id,
+      });
+      if (!alreadyHasToken) {
+        let OTP = generateOTP();
+
+        const newemailVarificationToken = new EmailVerificationToken({
+          owner: user._id,
+          token: OTP,
+        });
+        await newemailVarificationToken.save();
+
+        var transport = generateMailTransporter();
+
+        transport.sendMail({
+          from: "6151071090@st.utc2.edu.vn",
+          to: user.email,
+          subject: "Welcome Email",
+          html: `
+            <p>Your verification OTP</p>
+            <h1>${OTP}</h1>
+        `,
+        });
+      }
+
+      res.json({
+        _id: user._id,
+        isVerified: user.isVerified,
+      });
     }
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -417,6 +534,7 @@ const updateUserProfile = asyncHandler(async (req, res) => {
         isAdmin: user.isAdmin,
         isVerified: user.isVerified,
         token: generateToken(user._id),
+        hasPassword: user.password !== "0 password" ? true : false,
       });
       // else send error message
     } else {
@@ -474,6 +592,33 @@ const changeUserPassword = asyncHandler(async (req, res) => {
       res.status(401);
       throw new Error("Mật khẩu cũ không đúng");
     }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// @desc Create user password
+// @route PUT /api/user/createpassword
+// @access Private
+const createUserPassword = asyncHandler(async (req, res) => {
+  const { newPassword, confirmPassword } = req.body;
+  try {
+    // Tìm tài khoản
+    const user = await User.findById(req.user._id);
+    // Nếu tồn tại
+    const matchedConfirm = newPassword === confirmPassword;
+    if (!matchedConfirm)
+      return sendError(
+        res,
+        "The confirm password is different from new password"
+      );
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.password = hashedPassword;
+    await user.save();
+    res.json({
+      message: "Create password successfully, now you can use this password.",
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -1144,10 +1289,13 @@ export {
   sendResetPasswordTokenStatus,
   resetPassword,
   loginUser,
+  loginGoogle,
+  loginGoogleSucces,
   getUserInfo,
   updateUserProfile,
   deleteUserProfile,
   changeUserPassword,
+  createUserPassword,
   getFollowingManga,
   getAllFollowingManga,
   addFollowingManga,

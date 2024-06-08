@@ -162,7 +162,7 @@ const getMangaTopMonth = asyncHandler(async (req, res) => {
                     },
                   },
                   as: "c",
-                  cond: { $eq: ["$$c.enable", 0] },
+                  cond: { $eq: ["$$c.enable", 1] },
                 },
               },
               1,

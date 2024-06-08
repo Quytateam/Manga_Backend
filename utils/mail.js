@@ -10,11 +10,20 @@ const generateOTP = (opt_length = 6) => {
   return OTP;
 };
 
+// const generateMailTransporter = () =>
+//   nodemailer.createTransport({
+//     host: "live.smtp.mailtrap.io",
+//     port: 2525,
+//     secure: false,
+//     auth: {
+//       user: process.env.MAIL_TRAP_USER,
+//       pass: process.env.MAIL_TRAP_PASS,
+//     },
+//   });
+
 const generateMailTransporter = () =>
   nodemailer.createTransport({
-    host: "live.smtp.mailtrap.io",
-    port: 2525,
-    secure: false,
+    service: "gmail",
     auth: {
       user: process.env.MAIL_TRAP_USER,
       pass: process.env.MAIL_TRAP_PASS,

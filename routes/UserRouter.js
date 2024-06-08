@@ -2,6 +2,7 @@ import express from "express";
 import {
   addFollowingManga,
   changeUserPassword,
+  createUserPassword,
   deleteAllFollowingManga,
   deleteFollowingManga,
   deleteUser,
@@ -55,6 +56,7 @@ router.get("/userinfo/:id", getUserInfo);
 router.put("/", protect, updateUserProfile);
 router.delete("/", protect, deleteUserProfile);
 router.patch("/password", protect, changeUserPassword);
+router.patch("/createpassword", protect, createUserPassword);
 router.get("/follow", protect, getFollowingManga);
 router.get("/allfollow", protect, getAllFollowingManga);
 router.post("/follow", protect, addFollowingManga);

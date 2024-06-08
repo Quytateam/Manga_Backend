@@ -12,9 +12,12 @@ import behaviorRouter from "./routes/BehaviorRouter.js";
 import requestRouter from "./routes/RequestRouter.js";
 import adminRouter from "./routes/AdminRouter.js";
 import searchRouter from "./routes/SearchRouter.js";
+import googleRouter from "./routes/GoogleRouter.js";
 import { autoMonth } from "./config/auto.js";
 import http from "http";
 import { Server } from "socket.io";
+import passport from "./config/passport.js";
+import session from "express-session";
 // import { setupWebSocketServer } from "./websocketServer.js";
 // import { PythonShell } from "python-shell";
 // import { exec } from "child_process";
@@ -32,6 +35,33 @@ app.get("/", (req, res) => {
   res.send("API running...");
 });
 
+// ************************************
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: true,
+  })
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Route Google OAuth
+// app.get(
+//   "/auth/google",
+//   passport.authenticate("google", { scope: ["profile", "email"] })
+// );
+
+// app.get(
+//   "/api/google/callback",
+//   passport.authenticate("google", {
+//     successRedirect: "http://localhost:3000/dashboard",
+//     failureRedirect: "http://localhost:3000/login",
+//   })
+// );
+// ************************************
+
 // Các route khác
 app.use("/api/users", userRouter);
 app.use("/api/role", roleRouter);
@@ -43,6 +73,7 @@ app.use("/api/behavior", behaviorRouter);
 app.use("/api/request", requestRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/google", googleRouter);
 
 // const pythonScriptPath =
 //   "C:/Users/USER/Downloads/graduation_project/server/config/toxic.py";
