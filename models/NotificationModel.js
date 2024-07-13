@@ -6,6 +6,7 @@ const NotificationSchema = mongoose.Schema({
     ref: "User",
   },
   content: { type: String, require: true },
+  isRead: { type: Boolean, require: true, default: false },
   enable: { type: Number, require: true, default: 1 },
   createdAt: {
     type: Date,

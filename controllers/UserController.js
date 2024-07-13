@@ -899,6 +899,30 @@ const getNotificationUser = asyncHandler(async (req, res) => {
   }
 });
 
+// @desc Get all Notification
+// @route GET /api/user/notificationisread
+// @access Private
+const getNotificationIsRead = asyncHandler(async (req, res) => {
+  // const { page } = req.query;
+  try {
+    //Tìm tk
+    const user = await User.findById(req.user._id);
+    // Nếu tk tồn tại
+    if (user) {
+      const notificationList = await NotificationModel.aggregate([
+        { $match: { userId: user._id } },
+        { $sort: { createdAt: -1 } },
+      ]);
+      res.json(notificationList);
+    } else {
+      res.status(404);
+      throw new Error("Không tìm thấy tài khoản");
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // @desc Hidden Notification
 // @route PATCH /api/user/notification
 // @access Private
@@ -913,6 +937,34 @@ const hiddenNotificationUser = asyncHandler(async (req, res) => {
       notification.enable = 0;
       await notification.save();
       res.json(notification);
+    } else {
+      res.status(404);
+      throw new Error("Không tìm thấy tài khoản");
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// @desc Hidden Notification
+// @route PUT /api/user/notification
+// @access Private
+const seenNotificationUser = asyncHandler(async (req, res) => {
+  // const { page } = req.query;
+  try {
+    //Tìm tk
+    const user = await User.findById(req.user._id);
+    // Nếu tk tồn tại
+    if (user) {
+      await NotificationModel.updateMany(
+        { userId: user._id },
+        {
+          $set: {
+            isRead: true,
+          },
+        }
+      );
+      res.json("Update Success!");
     } else {
       res.status(404);
       throw new Error("Không tìm thấy tài khoản");
@@ -1109,14 +1161,15 @@ const ratingManga = asyncHandler(async (req, res) => {
         (b) => b.mangaId.toString() === mangaid.toString()
       );
       behaviorItem.rating = req.body.rate;
-      await behavior.save();
-      await manga.save({ timestamps: false });
-      await axios.post("http://127.0.0.1:8000/rating", {
+      const mess = await axios.post("http://127.0.0.1:8000/rating", {
         userId: user._id,
         mangaId: manga._id,
-        // mangaId: "662a9e78d2a9173d53c01ba2",
         rate: req.body.rate,
       });
+      if (mess.data === "Done") {
+        await behavior.save();
+        await manga.save({ timestamps: false });
+      }
       res.status(201).json(manga);
     }
   } catch (error) {
@@ -1303,7 +1356,9 @@ export {
   deleteAllFollowingManga,
   getCommentUser,
   getNotificationUser,
+  getNotificationIsRead,
   hiddenNotificationUser,
+  seenNotificationUser,
   getDataReadUser,
   getUsers,
   deleteUser,

@@ -18,6 +18,7 @@ import http from "http";
 import { Server } from "socket.io";
 import passport from "./config/passport.js";
 import session from "express-session";
+import { initializeSocket } from "./socket.js";
 // import { setupWebSocketServer } from "./websocketServer.js";
 // import { PythonShell } from "python-shell";
 // import { exec } from "child_process";
@@ -84,13 +85,15 @@ const PORT = process.env.PORT || 5000;
 // const server = http.createServer(app);
 // setupWebSocketServer(server);
 
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
+//   console.log(`Server running in http://localhost/${PORT}`);
+// });
+
+const server = app.listen(PORT, () => {
   console.log(`Server running in http://localhost/${PORT}`);
 });
 
-// const server = app.listen(PORT, () => {
-//   console.log(`Server running in http://localhost/${PORT}`);
-// });
+initializeSocket(server);
 
 // // Khởi tạo Socket.IO server
 // const io = new Server(server, {

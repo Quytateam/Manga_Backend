@@ -51,5 +51,6 @@ router.delete("/feedback", protect, commentController.deleteFeedBack);
 router.put("/emofeedback", protect, commentController.emoFeedBack);
 router.post("/rating/:manganame", protect, userController.ratingManga);
 router.get("/recommend", protect, mangaController.getRecommend);
+router.get("/collection", protect, mangaController.getCollectionList);
 
 export default router;

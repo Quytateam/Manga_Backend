@@ -55,11 +55,11 @@ const UserSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    googleId: {
-      type: String,
-      unique: true,
-      sparse: true, // Cho phép trường này có thể không có giá trị
-    },
+    // googleId: {
+    //   type: String,
+    //   unique: true,
+    //   sparse: true, // Cho phép trường này có thể không có giá trị
+    // },
     followingManga: [followingMangaSchema],
     isVerified: {
       type: Boolean,

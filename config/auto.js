@@ -7,6 +7,7 @@ import CommentModel from "../models/CommentModel.js";
 import UserModel from "../models/UserModel.js";
 import NotificationModel from "../models/NotificationModel.js";
 import WarningModel from "../models/WarningModel.js";
+import { broadcastMessage } from "../socket.js";
 
 export const autoMonth = cron.schedule("0 0 1 * *", async () => {
   try {
@@ -89,7 +90,7 @@ export const autoDay = cron.schedule("0 1 * * *", async () => {
 //   );
 // });
 
-export const autoToxicity = cron.schedule("* * * * *", async () => {
+export const autoToxicity = cron.schedule("*/30 * * * * *", async () => {
   try {
     const commentToxic = await RequestModel.find({
       typeRequest: requestType.Report,
@@ -121,6 +122,7 @@ export const autoToxicity = cron.schedule("* * * * *", async () => {
             await deleteCommentOrFeedBack(comment, feedBack, feedBackId == "");
             await createWarning(user);
             await note.save();
+            broadcastMessage(user?._id.toString());
           } else if (toxicityPredictions.level > 0) {
             user.numberOfWarnings += toxicityPredictions.level;
             if (user.numberOfWarnings >= 3) {
@@ -136,6 +138,7 @@ export const autoToxicity = cron.schedule("* * * * *", async () => {
               );
               await createWarning(user);
               await note.save();
+              broadcastMessage(user?._id.toString());
             } else {
               const note = new NotificationModel({
                 userId: user._id,
@@ -149,6 +152,7 @@ export const autoToxicity = cron.schedule("* * * * *", async () => {
               );
               await note.save();
               await user.save();
+              broadcastMessage(user?._id.toString());
             }
           } else {
             if (feedBackId == "")
@@ -206,13 +210,10 @@ export const autoBan = cron.schedule("0 * * * * *", async () => {
   }
 });
 
-export const autoCheckComment = cron.schedule("0 0 1 * * *", async () => {
+export const autoCheckComment = cron.schedule("* * * * *", async () => {
   try {
     const commentList = await CommentModel.find({
-      $or: [
-        { isChecked: false },
-        { "feedBack.isChecked": false },
-      ],
+      $or: [{ isChecked: false }, { "feedBack.isChecked": false }],
     });
     if (commentList) {
       commentList.forEach(async (comment) => {
@@ -233,6 +234,7 @@ export const autoCheckComment = cron.schedule("0 0 1 * * *", async () => {
           await checkFunc(comment, null, comment.commentContent, true);
         }
       });
+      broadcastMessage("All");
     }
     // console.log(commentList);
   } catch (error) {
@@ -340,5 +342,14 @@ const checkFunc = async (comment, feedback, contentCheck, check) => {
 //   } catch (error) {
 //     console.error("Error calling Python API:", error.message);
 //     throw error;
+//   }
+// });
+
+// export const test = cron.schedule("*/50 * * * * *", async () => {
+//   try {
+//     // console.log("111");
+//     broadcastMessage("Done");
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
 //   }
 // });

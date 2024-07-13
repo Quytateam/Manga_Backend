@@ -8,6 +8,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import GenresModel from "../models/GenresModel.js";
 import axios from "axios";
 import { ObjectId } from "mongodb";
+import BehaviorModel from "../models/BehaviorModel.js";
 
 // ******** PUBLIC CONTROLLERS ***********
 // @desc import manga
@@ -491,7 +492,7 @@ const getMangaByKeyWord = asyncHandler(async (req, res) => {
 });
 
 // @desc get recommend
-// @route GET /api/manga/recommend"
+// @route GET /api/manga/recommend
 // @access Public
 const getRecommend = asyncHandler(async (req, res) => {
   try {
@@ -551,7 +552,96 @@ const getRecommend = asyncHandler(async (req, res) => {
         ]);
         if (mangaList.length > 0) recommendList.push(mangaList[0]);
       }
-      res.json(recommendList.slice(0, 36));
+      res.json(recommendList.slice(0, 12));
+    }
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// @desc get recommend
+// @route GET /api/manga/collection
+// @access Public
+const getCollectionList = asyncHandler(async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user._id);
+    if (user) {
+      const result = await BehaviorModel.aggregate([
+        { $match: { userId: user._id } },
+        { $unwind: "$behaviorList" },
+        {
+          $addFields: {
+            "behaviorList.calcValue": {
+              $floor: { $divide: ["$behaviorList.readingFrequency", 3.5] },
+            },
+          },
+        },
+        { $match: { "behaviorList.calcValue": { $gt: 0 } } },
+        { $sort: { "behaviorList.calcValue": -1 } },
+        { $project: { _id: "$behaviorList.mangaId" } },
+      ]);
+      const collectionList = [];
+      if (result.length > 0) {
+        const stringIdArray = result.map((item) => item._id.toString());
+        const response = await axios.get("http://127.0.0.1:8000/collection", {
+          params: {
+            listId: stringIdArray,
+          },
+          paramsSerializer: (params) => {
+            return new URLSearchParams(params).toString();
+          },
+        });
+        for (const e of response.data) {
+          const mangaList = await Manga.aggregate([
+            {
+              $match: {
+                _id: new ObjectId(e),
+                enable: 1,
+              },
+            },
+            {
+              $set: {
+                chapter: {
+                  $slice: [
+                    {
+                      $filter: {
+                        input: {
+                          $sortArray: {
+                            input: "$chapter",
+                            sortBy: { chapName: -1 },
+                          },
+                        },
+                        as: "c",
+                        cond: { $eq: ["$$c.enable", 1] },
+                      },
+                    },
+                    3,
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                name: 1,
+                nameOnUrl: 1,
+                image: 1,
+                genre: 1,
+                numberOfChapters: 1,
+                numberOfViews: 1,
+                numberOfFollows: 1,
+                numberOfComments: 1,
+                "chapter._id": 1,
+                "chapter.chapName": 1,
+                "chapter.updatedAt": 1,
+                createdAt: 1,
+                updatedAt: 1,
+              },
+            },
+          ]);
+          if (mangaList.length > 0) collectionList.push(mangaList[0]);
+        }
+      }
+      res.json(collectionList.slice(0, 36));
     }
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -815,6 +905,7 @@ export {
   getAllManga,
   getHotManga,
   getRecommend,
+  getCollectionList,
   getViewDayManga,
   getViewWeekManga,
   getMangaTopMonth,

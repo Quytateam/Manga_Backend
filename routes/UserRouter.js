@@ -13,6 +13,7 @@ import {
   getCommentUser,
   getDataReadUser,
   getFollowingManga,
+  getNotificationIsRead,
   getNotificationUser,
   getUserInfo,
   getUsers,
@@ -21,6 +22,7 @@ import {
   registerUser,
   resendEmailVerificationToken,
   resetPassword,
+  seenNotificationUser,
   sendResetPasswordTokenStatus,
   setAdminUser,
   updateUserProfile,
@@ -69,7 +71,9 @@ router.post(
 );
 router.get("/comment", protect, getCommentUser);
 router.get("/notification", protect, getNotificationUser);
+router.get("/notificationisread", protect, getNotificationIsRead);
 router.patch("/notification/:id", protect, hiddenNotificationUser);
+router.put("/seennotification", protect, seenNotificationUser);
 router.get("/dataread/:manganame", protect, getDataReadUser);
 // ******** ADMIN ROUTES ***********
 router.get("/", protect, admin, getUsers);
